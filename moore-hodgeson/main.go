@@ -56,6 +56,7 @@ func (self *JobMaster) AssignJobs() []Job {
 			// update gamma
 			gamma = gamma + job.processingTime
 		} else {
+			// include the current seen job
 			self.scheduledJobs = append(self.scheduledJobs, job)
 
 			// find a job with the largest processing time
@@ -68,7 +69,8 @@ func (self *JobMaster) AssignJobs() []Job {
 				}
 			}
 
-			// remove the job with the largest processing time from the schedulerJobs
+			// remove the job with the largest processing time from schedulerJobs
+			// and move it to remainingJobs
 			for _, job := range self.scheduledJobs {
 				if job.processingTime == largestProcessingJob.processingTime {
 					self.remainingJobs = append(self.remainingJobs, job)
