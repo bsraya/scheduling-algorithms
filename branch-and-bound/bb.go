@@ -19,51 +19,104 @@ type Node struct {
 
 type PriorityQueue []*Node
 
-func print(minimum *Node) {
-	if minimum.parent == nil {
-		return
+func (pq PriorityQueue) Len() int { return len(pq) }
+
+func (pq PriorityQueue) Swap(i, j int) {
+	pq[i], pq[j] = pq[j], pq[i]
+}
+
+func (pq PriorityQueue) Less(i, j int) bool {
+	return pq[i].cost < pq[j].cost
+}
+
+// return the node with the least estimated cost
+func (pq PriorityQueue) Top() *Node {
+	return pq[0]
+}
+
+func (pq *PriorityQueue) Pop() interface{} {
+	old := *pq
+	n := len(old)
+	job := old[n-1]
+	old[n-1] = nil // avoid memory leak
+	*pq = old[0 : n-1]
+	return job
+}
+
+func (pq *PriorityQueue) Push(x interface{}) {
+	job := x.(*Node)
+	*pq = append(*pq, job)
+}
+
+func CreateNode(x, y int, assigned [workers]bool, parent *Node) *Node {
+	newNode := &Node{
+		parent:   parent,
+		workerID: x,
+		jobID:    y,
+		assigned: assigned,
 	}
-	print(minimum.parent)
-	fmt.Printf("Assign worker no. %d to do job no. %d\n", minimum.workerID, minimum.jobID)
+	if parent != nil {
+		newNode.assigned[y] = true
+	}
+	return newNode
 }
 
 func FindMinimumCost(cost [workers][workers]int) int {
-	// Create a priority queue to store live vodes of search tree
 	pq := make(PriorityQueue, 0)
 	heap.Init(&pq)
-	heap.Init(&pq)
-	heap.Push(&pq, &Node{0, 0, 0, 0, 0, [workers]bool{false, false, false, false}})
 
-	// while pq is not empty, pop a node from pq
-	if node.cost == node.pathCost {
-		print(node)
-		return
-	}
-	for i := 0; i < workers; i++ {
-		if !node.assigned[i] {
-			newNode := &Node{node, node.pathCost, node.pathCost + node.cost[i][node.workerID], i, node.jobID + 1, node.assigned}
-			newNode.assigned[i] = true
-			heap.Push(&pq, newNode)
+	assigned := [workers]bool{false}
+	root := CreateNode(0, 0, assigned, nil)
+	root.pathCost = 0
+	root.cost = 0
+	root.workerID = 0
+
+	pq.Push(root)
+	minCost := 0
+
+	for pq.Len() > 0 {
+		min := pq.Pop().(*Node)
+
+		nextWorkerID := min.workerID + 1
+		if nextWorkerID == workers {
+			PrintAssignment(min)
+			minCost = min.cost
+			break
+		}
+
+		for i := 0; i < workers; i++ {
+			if !min.assigned[i] {
+				newNode := CreateNode(nextWorkerID, i, min.assigned, min)
+				newNode.pathCost = min.pathCost + cost[min.workerID][i]
+				newNode.cost = newNode.pathCost + CalculateCost(cost, newNode.workerID, i, newNode.assigned)
+				pq.Push(newNode)
+			}
 		}
 	}
-	return 0
+	return minCost
 }
 
-func calculateCost(costMatrix [workers][workers]int, x, y int, assigned [workers]bool) int {
+func PrintAssignment(minimum *Node) {
+	if minimum.parent == nil {
+		return
+	}
+	PrintAssignment(minimum.parent)
+	char := 'A' + minimum.workerID
+	fmt.Printf("Assign worker %s to do job %d\n", string(char), minimum.jobID)
+}
+
+func CalculateCost(costMatrix [workers][workers]int, x, y int, assigned [workers]bool) int {
 	cost := 0
 
-	available := [workers]bool{true}
+	available := [workers]bool{true, true, true, true}
 
 	for i := x + 1; i < workers; i++ {
 		min := math.MaxInt64
 		minIndex := -1
 		for j := 0; j < workers; j++ {
-			if assigned[j] {
-				continue
-			}
-			if costMatrix[i][j] < min {
-				min = costMatrix[i][j]
+			if !assigned[j] && available[j] && costMatrix[i][j] < min {
 				minIndex = j
+				min = costMatrix[i][j]
 			}
 		}
 		cost += min
@@ -79,5 +132,16 @@ func main() {
 		{5, 8, 1, 9},
 		{7, 6, 9, 4},
 	}
-	FindMinimumCost(cost)
+	result := FindMinimumCost(cost)
+	fmt.Println(result)
+	// pq := make(PriorityQueue, 0)
+	// heap.Init(&pq)
+	// assigned := [workers]bool{false}
+	// root := CreateNode(0, 0, assigned, nil)
+	// root.pathCost = 0
+	// root.cost = 0
+	// root.workerID = 0
+
+	// pq.Push(root)
+	// fmt.Println(pq[0])
 }
