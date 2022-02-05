@@ -29,11 +29,6 @@ func (pq PriorityQueue) Less(i, j int) bool {
 	return pq[i].cost < pq[j].cost
 }
 
-// return the node with the least estimated cost
-func (pq PriorityQueue) Top() *Node {
-	return pq[0]
-}
-
 func (pq *PriorityQueue) Pop() interface{} {
 	old := *pq
 	n := len(old)
@@ -46,6 +41,13 @@ func (pq *PriorityQueue) Pop() interface{} {
 func (pq *PriorityQueue) Push(x interface{}) {
 	job := x.(*Node)
 	*pq = append(*pq, job)
+}
+
+func (pq *PriorityQueue) Peek() interface{} {
+	old := *pq
+	n := len(old)
+	x := old[n-1]
+	return x
 }
 
 func CreateNode(x, y int, assigned [workers]bool, parent *Node) *Node {
@@ -61,35 +63,57 @@ func CreateNode(x, y int, assigned [workers]bool, parent *Node) *Node {
 	return newNode
 }
 
+func FindSmallestElementIndex(pq []*Node) int {
+	min := math.MaxInt
+	minIndex := -1
+	for i := 0; i < len(pq); i++ {
+		if pq[i].cost < min {
+			min = pq[i].cost
+			minIndex = i
+		}
+	}
+	return minIndex
+}
+
 func FindMinimumCost(cost [workers][workers]int) int {
 	pq := make(PriorityQueue, 0)
 	heap.Init(&pq)
 
-	assigned := [workers]bool{false}
-	root := CreateNode(0, 0, assigned, nil)
+	assigned := [workers]bool{false, false, false, false}
+	root := CreateNode(-1, -1, assigned, nil)
 	root.pathCost = 0
 	root.cost = 0
-	root.workerID = 0
+	root.workerID = -1
 
 	pq.Push(root)
 	minCost := 0
 
 	for pq.Len() > 0 {
-		min := pq.Pop().(*Node)
+		// find the index of a node with the smallest cost
+		minIndex := FindSmallestElementIndex(pq)
 
-		nextWorkerID := min.workerID + 1
-		if nextWorkerID == workers {
-			PrintAssignment(min)
+		// swap the node with the smallest cost with the last element
+		pq.Swap(minIndex, pq.Len()-1)
+
+		// peek the last element that is also the node with the smallest cost
+		min := pq.Peek().(*Node)
+
+		// pop the last element
+		_ = pq.Pop().(*Node)
+
+		i := min.workerID + 1
+		if i == workers {
+			// PrintAssignment(min)
 			minCost = min.cost
 			break
 		}
 
-		for i := 0; i < workers; i++ {
-			if !min.assigned[i] {
-				newNode := CreateNode(nextWorkerID, i, min.assigned, min)
-				newNode.pathCost = min.pathCost + cost[min.workerID][i]
-				newNode.cost = newNode.pathCost + CalculateCost(cost, newNode.workerID, i, newNode.assigned)
-				pq.Push(newNode)
+		for j := 0; j < workers; j++ {
+			if !min.assigned[j] {
+				child := CreateNode(i, j, min.assigned, min)
+				child.pathCost = min.pathCost + cost[i][j]
+				child.cost = child.pathCost + CalculateCost(cost, i, j, child.assigned)
+				pq.Push(child)
 			}
 		}
 	}
@@ -101,8 +125,8 @@ func PrintAssignment(minimum *Node) {
 		return
 	}
 	PrintAssignment(minimum.parent)
-	char := 'A' + minimum.workerID
-	fmt.Printf("Assign worker %s to do job %d\n", string(char), minimum.jobID)
+	worker := 'A' + minimum.workerID
+	fmt.Printf("Assign worker %c to job %d\n", worker, minimum.jobID)
 }
 
 func CalculateCost(costMatrix [workers][workers]int, x, y int, assigned [workers]bool) int {
@@ -111,7 +135,7 @@ func CalculateCost(costMatrix [workers][workers]int, x, y int, assigned [workers
 	available := [workers]bool{true, true, true, true}
 
 	for i := x + 1; i < workers; i++ {
-		min := math.MaxInt64
+		min := math.MaxInt
 		minIndex := -1
 		for j := 0; j < workers; j++ {
 			if !assigned[j] && available[j] && costMatrix[i][j] < min {
@@ -127,21 +151,11 @@ func CalculateCost(costMatrix [workers][workers]int, x, y int, assigned [workers
 
 func main() {
 	cost := [workers][workers]int{
-		{9, 2, 7, 8},
-		{6, 4, 3, 7},
-		{5, 8, 1, 9},
-		{7, 6, 9, 4},
+		{90, 75, 75, 80},
+		{30, 85, 55, 65},
+		{125, 95, 90, 105},
+		{45, 110, 95, 115},
 	}
 	result := FindMinimumCost(cost)
 	fmt.Println(result)
-	// pq := make(PriorityQueue, 0)
-	// heap.Init(&pq)
-	// assigned := [workers]bool{false}
-	// root := CreateNode(0, 0, assigned, nil)
-	// root.pathCost = 0
-	// root.cost = 0
-	// root.workerID = 0
-
-	// pq.Push(root)
-	// fmt.Println(pq[0])
 }
