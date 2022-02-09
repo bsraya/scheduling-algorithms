@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"sort"
 )
 
@@ -15,7 +14,7 @@ type Job struct {
 type JobMaster struct {
 	initialJobs   []Job
 	scheduledJobs []Job
-	remainingJobs []Job
+	rejectedJobs  []Job
 	lastJobID     int
 }
 
@@ -35,8 +34,8 @@ func (jobs Jobs) Swap(i, j int) {
 
 // add job to the job master and increment lastJobID
 func (self *JobMaster) AddJob(dueDate int, processingTime int) {
-	self.lastJobID++
 	self.initialJobs = append(self.initialJobs, Job{self.lastJobID, dueDate, processingTime})
+	self.lastJobID++
 }
 
 // Scheduling algorithm with Moore-Hodgeson
@@ -45,53 +44,48 @@ func (self *JobMaster) AssignJobs() []Job {
 	sortedJobs := self.initialJobs
 	sort.Sort(Jobs(sortedJobs))
 
-	// 2. Make an empty set called `schedulerJobs` and let gamma = 0
-	// gamma is the total completion time of schedulued jobs
-	var gamma int = 0
+	// 2. Let total completion time be 0
+	var totalCompletionTime int = 0
 
 	// 3. Iterate over jobs and append a job accordingly
 	for _, job := range sortedJobs {
-		if gamma+job.processingTime <= job.dueDate {
+		if totalCompletionTime+job.processingTime <= job.dueDate {
 			// include the current seen job
 			self.scheduledJobs = append(self.scheduledJobs, job)
 
-			// update gamma
-			gamma += job.processingTime
+			// update totalCompletionTime
+			totalCompletionTime = totalCompletionTime + job.processingTime
 		} else {
 			// include the current seen job
 			self.scheduledJobs = append(self.scheduledJobs, job)
 
 			// find a job with the largest processing time
-			var threshold = math.MinInt
-			// var largestProcessingJob Job
+			var largestProcessingJob Job
 			var deleteIndex int
 			for index, job := range self.scheduledJobs {
-				if job.processingTime > threshold {
+				if job.processingTime > largestProcessingJob.processingTime {
+					largestProcessingJob = job
 					deleteIndex = index
 				}
 			}
 
 			// remove the job with the largest processing time from schedulerJobs
-			// and move it to remainingJobs
+			// and move it to rejectedJobs
 			for _, job := range self.scheduledJobs {
-				if job.id == deleteIndex+1 { // +1 because the job id starts from 1
-					self.remainingJobs = append(self.remainingJobs, job)
+				if job.processingTime == largestProcessingJob.processingTime {
+					self.rejectedJobs = append(self.rejectedJobs, job)
 					self.scheduledJobs = append(self.scheduledJobs[:deleteIndex], self.scheduledJobs[deleteIndex+1:]...)
 				}
 			}
+
+			// update totalCompletionTime
+			totalCompletionTime = totalCompletionTime + job.processingTime - largestProcessingJob.processingTime
 		}
 	}
 	return self.scheduledJobs
 }
 
 func main() {
-	// 1. a list of jobs with IDs
-	// 2. give each job a unique ID
-	// 3. remove duplicate jobs (first come, first serve)
-	// 3. pass the list of jobs to the job master
-	// 4. the job master schedules jobs so that we have the least amount of late jobs
-	// 5. append the remaining jobs to the scheduled jobs
-
 	var master JobMaster
 	jobs := [][]int{
 		{6, 4},
@@ -101,31 +95,16 @@ func main() {
 		{11, 6},
 	}
 
-	// jobs := [][]int{
-	// 	{6, 4},
-	// 	{8, 1},
-	// 	{9, 6},
-	// 	{11, 3},
-	// 	{20, 6},
-	// 	{25, 8},
-	// 	{28, 7},
-	// 	{35, 10},
-	// }
-
 	// add jobs to the job master
 	for _, job := range jobs {
 		master.AddJob(job[0], job[1])
 	}
 
 	master.AssignJobs()
-
 	scheduledJobs := master.scheduledJobs
-	sort.Sort(Jobs(master.remainingJobs))
-
-	// append the remaining jobs to the scheduled jobs
-	endResult := append(scheduledJobs, master.remainingJobs...)
-
+	sort.Sort(Jobs(master.rejectedJobs))
+	endResult := append(scheduledJobs, master.rejectedJobs...)
 	fmt.Println("Scheduled jobs are", master.scheduledJobs)
-	fmt.Println("Remaining jobs are", master.remainingJobs)
+	fmt.Println("Remaining jobs are", master.rejectedJobs)
 	fmt.Println("All the scheduled jobs are", endResult)
 }
