@@ -46,22 +46,17 @@ func (self *JobMaster) AssignJobs() []Job {
 
 	// 2. Let total completion time be 0
 	var totalCompletionTime int = 0
+	var largestProcessingJob Job
+	var deleteIndex int
 
 	// 3. Iterate over jobs and append a job accordingly
 	for _, job := range sortedJobs {
-		if totalCompletionTime+job.processingTime <= job.dueDate {
-			// include the current seen job
-			self.scheduledJobs = append(self.scheduledJobs, job)
+		self.scheduledJobs = append(self.scheduledJobs, job)
 
-			// update totalCompletionTime
+		if totalCompletionTime+job.processingTime <= job.dueDate {
 			totalCompletionTime = totalCompletionTime + job.processingTime
 		} else {
-			// include the current seen job
-			self.scheduledJobs = append(self.scheduledJobs, job)
-
-			// find a job with the largest processing time
-			var largestProcessingJob Job
-			var deleteIndex int
+			// find the index of a job with the largest processing time
 			for index, job := range self.scheduledJobs {
 				if job.processingTime > largestProcessingJob.processingTime {
 					largestProcessingJob = job
@@ -69,8 +64,8 @@ func (self *JobMaster) AssignJobs() []Job {
 				}
 			}
 
-			// remove the job with the largest processing time from schedulerJobs
-			// and move it to rejectedJobs
+			// remove the job with the largest processing time
+			// from schedulerJobs and move it to rejectedJobs
 			for _, job := range self.scheduledJobs {
 				if job.processingTime == largestProcessingJob.processingTime {
 					self.rejectedJobs = append(self.rejectedJobs, job)
@@ -78,7 +73,6 @@ func (self *JobMaster) AssignJobs() []Job {
 				}
 			}
 
-			// update totalCompletionTime
 			totalCompletionTime = totalCompletionTime + job.processingTime - largestProcessingJob.processingTime
 		}
 	}
