@@ -8,6 +8,9 @@ import (
 
 const workers = 4
 
+// create a global variable to store the assignments
+var assignments []Assignment
+
 type Node struct {
 	parent   *Node
 	pathCost int
@@ -15,6 +18,10 @@ type Node struct {
 	workerID int
 	jobID    int
 	assigned [workers]bool
+}
+
+type Assignment struct {
+	Node, Job int
 }
 
 type PriorityQueue []*Node
@@ -104,6 +111,7 @@ func FindMinimumCost(cost [workers][workers]int) int {
 		i := min.workerID + 1
 		if i == workers {
 			// PrintAssignment(min)
+			AssignJobToNode(min)
 			minCost = min.cost
 			break
 		}
@@ -129,6 +137,14 @@ func PrintAssignment(minimum *Node) {
 	fmt.Printf("Assign worker %c to job %d\n", worker, minimum.jobID)
 }
 
+func AssignJobToNode(minimum *Node) {
+	if minimum.parent == nil {
+		return
+	}
+	AssignJobToNode(minimum.parent)
+	assignments = append(assignments, Assignment{minimum.workerID, minimum.jobID})
+}
+
 func CalculateCost(costMatrix [workers][workers]int, x, y int, assigned [workers]bool) int {
 	cost := 0
 
@@ -149,13 +165,21 @@ func CalculateCost(costMatrix [workers][workers]int, x, y int, assigned [workers
 	return cost
 }
 
+func BranchAndBound(cost [workers][workers]int) []Assignment {
+	FindMinimumCost(cost)
+	return assignments
+}
+
 func main() {
 	cost := [workers][workers]int{
-		{90, 75, 75, 80},
-		{30, 85, 55, 65},
-		{125, 95, 90, 105},
-		{45, 110, 95, 115},
+		{9, 2, 7, 8},
+		{6, 4, 3, 7},
+		{5, 8, 1, 8},
+		{7, 6, 9, 4},
 	}
-	result := FindMinimumCost(cost)
+	// min := FindMinimumCost(cost)
+	// fmt.Println(min)
+	// fmt.Println(assignments)
+	result := BranchAndBound(cost)
 	fmt.Println(result)
 }
