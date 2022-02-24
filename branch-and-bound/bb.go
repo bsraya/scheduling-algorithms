@@ -6,126 +6,49 @@ import (
 	"math"
 )
 
-const workers = 4
-
-// create a global variable to store the assignments
-var assignments []Assignment
-
 type Node struct {
-	parent   *Node
+	// stores the parent of a node
+	parent *Node
+
+	// the path cost from the root to the node
 	pathCost int
+
+	// the cost of the node
 	cost     int
 	workerID int
 	jobID    int
-	assigned [workers]bool
+	assigned []bool
 }
 
-type Assignment struct {
-	Node, Job int
+type Nodes []*Node
+
+func initializeHeap(nodes []*Node) *Nodes {
+	h := Nodes(nodes)
+	heap.Init(&h)
+	return &h
 }
 
-type PriorityQueue []*Node
+func (h Nodes) Len() int { return len(h) }
 
-func (pq PriorityQueue) Len() int { return len(pq) }
+// order the heap by the cost of the node
+func (h Nodes) Less(i, j int) bool { return h[i].cost < h[j].cost }
 
-func (pq PriorityQueue) Swap(i, j int) {
-	pq[i], pq[j] = pq[j], pq[i]
+func (h Nodes) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
 }
 
-func (pq PriorityQueue) Less(i, j int) bool {
-	return pq[i].cost < pq[j].cost
+func (h *Nodes) Push(x interface{}) {
+	*h = append(*h, x.(*Node))
 }
 
-func (pq *PriorityQueue) Pop() interface{} {
-	old := *pq
-	n := len(old)
-	job := old[n-1]
-	old[n-1] = nil // avoid memory leak
-	*pq = old[0 : n-1]
-	return job
-}
-
-func (pq *PriorityQueue) Push(x interface{}) {
-	job := x.(*Node)
-	*pq = append(*pq, job)
-}
-
-func (pq *PriorityQueue) Peek() interface{} {
-	old := *pq
+func (h *Nodes) Pop() interface{} {
+	// pop the node with the smallest path cost
+	old := *h
 	n := len(old)
 	x := old[n-1]
+	old[n-1] = nil // avoid memory leak
+	*h = old[0 : n-1]
 	return x
-}
-
-func CreateNode(x, y int, assigned [workers]bool, parent *Node) *Node {
-	newNode := &Node{
-		parent:   parent,
-		workerID: x,
-		jobID:    y,
-		assigned: assigned,
-	}
-	if parent != nil {
-		newNode.assigned[y] = true
-	}
-	return newNode
-}
-
-func FindSmallestElementIndex(pq []*Node) int {
-	min := math.MaxInt
-	minIndex := -1
-	for i := 0; i < len(pq); i++ {
-		if pq[i].cost < min {
-			min = pq[i].cost
-			minIndex = i
-		}
-	}
-	return minIndex
-}
-
-func FindMinimumCost(cost [workers][workers]int) int {
-	pq := make(PriorityQueue, 0)
-	heap.Init(&pq)
-
-	assigned := [workers]bool{false, false, false, false}
-	root := CreateNode(-1, -1, assigned, nil)
-	root.pathCost = 0
-	root.cost = 0
-	root.workerID = -1
-
-	pq.Push(root)
-	minCost := 0
-
-	for pq.Len() > 0 {
-		// find the index of a node with the smallest cost
-		minIndex := FindSmallestElementIndex(pq)
-
-		// swap the node with the smallest cost with the last element
-		pq.Swap(minIndex, pq.Len()-1)
-
-		// peek the last element that is also the node with the smallest cost
-		min := pq.Peek().(*Node)
-
-		// pop the last element
-		_ = pq.Pop().(*Node)
-
-		i := min.workerID + 1
-		if i == workers {
-			// PrintAssignment(min)
-			AssignJobToNode(min)
-			minCost = min.cost
-			break
-		}
-
-		for j := 0; j < workers; j++ {
-			if !min.assigned[j] {
-				child := CreateNode(i, j, min.assigned, min)
-				child.pathCost = min.pathCost + cost[i][j]
-				child.cost = child.pathCost + CalculateCost(cost, i, j, child.assigned)
-				pq.Push(child)
-			}
-		}
-	}
-	return minCost
 }
 
 func PrintAssignment(minimum *Node) {
@@ -137,49 +60,87 @@ func PrintAssignment(minimum *Node) {
 	fmt.Printf("Assign worker %c to job %d\n", worker, minimum.jobID)
 }
 
-func AssignJobToNode(minimum *Node) {
-	if minimum.parent == nil {
-		return
+func CalculateCost(cost []int, x int, gpus, jobs int, assigned []bool) int {
+	totalCost := 0
+
+	available := []bool{}
+	for i := 0; i < gpus; i++ {
+		available = append(available, true)
 	}
-	AssignJobToNode(minimum.parent)
-	assignments = append(assignments, Assignment{minimum.workerID, minimum.jobID})
-}
 
-func CalculateCost(costMatrix [workers][workers]int, x, y int, assigned [workers]bool) int {
-	cost := 0
-
-	available := [workers]bool{true, true, true, true}
-
-	for i := x + 1; i < workers; i++ {
+	for i := x + 1; i < gpus; i++ {
 		min := math.MaxInt
-		minIndex := -1
-		for j := 0; j < workers; j++ {
-			if !assigned[j] && available[j] && costMatrix[i][j] < min {
+		minIndex := math.MinInt
+		for j := 0; j < jobs; j++ {
+			if !assigned[j] && available[j] && cost[i*gpus+j] < min {
 				minIndex = j
-				min = costMatrix[i][j]
+				min = cost[i*gpus+j]
 			}
 		}
-		cost += min
+		totalCost += min
 		available[minIndex] = false
 	}
-	return cost
+	return totalCost
 }
 
-func BranchAndBound(cost [workers][workers]int) []Assignment {
-	FindMinimumCost(cost)
-	return assignments
+func findMinimumCost(costMatrix []int, gpus int) int {
+	jobs := len(costMatrix) / gpus
+	h := initializeHeap(Nodes{})
+
+	var assigned []bool
+	for i := 0; i < gpus; i++ {
+		assigned = append(assigned, false)
+	}
+
+	// push a root node into heap
+	heap.Push(h, &Node{
+		parent:   nil,
+		pathCost: 0,
+		cost:     0,
+		workerID: -1,
+		jobID:    -1,
+		assigned: assigned,
+	})
+	minCost := 0
+
+	for h.Len() > 0 {
+		// store the node with the smallest cost
+		min := heap.Pop(h).(*Node)
+		i := min.workerID + 1
+
+		if i == 4 {
+			PrintAssignment(min)
+			minCost = min.cost
+			break
+		}
+		for j := 0; j < jobs; j++ {
+			if !min.assigned[j] {
+				child := &Node{
+					parent:   min,
+					pathCost: 0,
+					cost:     0,
+					workerID: i,
+					jobID:    j,
+					assigned: min.assigned,
+				}
+				child.assigned[j] = true
+				child.pathCost = min.pathCost + costMatrix[i*gpus+j]
+				child.cost = child.pathCost + CalculateCost(costMatrix, i, gpus, jobs, child.assigned)
+				heap.Push(h, child)
+			}
+		}
+	}
+	return minCost
 }
 
 func main() {
-	cost := [workers][workers]int{
-		{9, 2, 7, 8},
-		{6, 4, 3, 7},
-		{5, 8, 1, 8},
-		{7, 6, 9, 4},
+	costMatrix := []int{
+		9, 2, 7, 8,
+		6, 4, 3, 7,
+		5, 8, 1, 8,
+		7, 6, 9, 4,
 	}
-	// min := FindMinimumCost(cost)
-	// fmt.Println(min)
-	// fmt.Println(assignments)
-	result := BranchAndBound(cost)
-	fmt.Println(result)
+	gpus := 4
+	optimalCost := findMinimumCost(costMatrix, gpus)
+	fmt.Printf("Optimal cost: %d\n", optimalCost)
 }
