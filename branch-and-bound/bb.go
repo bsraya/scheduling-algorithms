@@ -121,8 +121,9 @@ func findMinimumCost(costMatrix []int, gpus int) int {
 					cost:     0,
 					workerID: i,
 					jobID:    j,
-					assigned: min.assigned,
+					assigned: []bool{},
 				}
+				child.assigned = append(child.assigned, min.assigned...)
 				child.assigned[j] = true
 				child.pathCost = min.pathCost + costMatrix[i*gpus+j]
 				child.cost = child.pathCost + CalculateCost(costMatrix, i, gpus, jobs, child.assigned)
