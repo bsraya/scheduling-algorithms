@@ -107,7 +107,7 @@ func FindMinimumCost(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 		jobID:    -1,
 		assigned: assigned,
 	})
-	minCost := 0
+	cost := 0
 
 	for h.Len() > 0 {
 		// store the node with the smallest cost
@@ -116,7 +116,7 @@ func FindMinimumCost(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 
 		if i == numberOfGpus {
 			AssignJobToNode(min)
-			minCost = min.cost
+			cost = min.cost
 			break
 		}
 		for j := 0; j < jobs; j++ {
@@ -148,7 +148,7 @@ func FindMinimumCost(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 	// set global assignment array to empty
 	assignments = []Assignment{}
 
-	return minCost, result
+	return cost, result
 }
 
 func main() {
