@@ -6,6 +6,13 @@ import (
 	"math"
 )
 
+var assignments []Assignment
+
+type Assignment struct {
+	workerID int
+	jobID    int
+}
+
 type Node struct {
 	// stores the parent of a node
 	parent *Node
@@ -51,13 +58,12 @@ func (h *Nodes) Pop() interface{} {
 	return x
 }
 
-func PrintAssignment(minimum *Node) {
+func AssignJobToNode(minimum *Node) {
 	if minimum.parent == nil {
 		return
 	}
-	PrintAssignment(minimum.parent)
-	worker := 'A' + minimum.workerID
-	fmt.Printf("Assign worker %c to job %d\n", worker, minimum.jobID)
+	AssignJobToNode(minimum.parent)
+	assignments = append(assignments, Assignment{minimum.workerID, minimum.jobID})
 }
 
 func CalculateCost(cost []int, x int, gpus, jobs int, assigned []bool) int {
@@ -83,12 +89,12 @@ func CalculateCost(cost []int, x int, gpus, jobs int, assigned []bool) int {
 	return totalCost
 }
 
-func findMinimumCost(costMatrix []int, gpus int) int {
-	jobs := len(costMatrix) / gpus
+func FindMinimumCost(costMatrix []int, numberOfGpus int) (int, []Assignment) {
+	jobs := len(costMatrix) / numberOfGpus
 	h := initializeHeap(Nodes{})
 
 	var assigned []bool
-	for i := 0; i < gpus; i++ {
+	for i := 0; i < numberOfGpus; i++ {
 		assigned = append(assigned, false)
 	}
 
@@ -108,8 +114,8 @@ func findMinimumCost(costMatrix []int, gpus int) int {
 		min := heap.Pop(h).(*Node)
 		i := min.workerID + 1
 
-		if i == 4 {
-			PrintAssignment(min)
+		if i == numberOfGpus {
+			AssignJobToNode(min)
 			minCost = min.cost
 			break
 		}
@@ -125,13 +131,24 @@ func findMinimumCost(costMatrix []int, gpus int) int {
 				}
 				child.assigned = append(child.assigned, min.assigned...)
 				child.assigned[j] = true
-				child.pathCost = min.pathCost + costMatrix[i*gpus+j]
-				child.cost = child.pathCost + CalculateCost(costMatrix, i, gpus, jobs, child.assigned)
+				child.pathCost = min.pathCost + costMatrix[i*numberOfGpus+j]
+				child.cost = child.pathCost + CalculateCost(costMatrix, i, numberOfGpus, jobs, child.assigned)
 				heap.Push(h, child)
 			}
 		}
 	}
-	return minCost
+
+	// copy the assignments to a new slice called result
+	// and result will be returned
+	result := []Assignment{}
+	for i := range assignments {
+		result = append(result, assignments[i])
+	}
+
+	// set global assignment array to empty
+	assignments = []Assignment{}
+
+	return minCost, result
 }
 
 func main() {
@@ -142,6 +159,7 @@ func main() {
 		7, 6, 9, 4,
 	}
 	gpus := 4
-	optimalCost := findMinimumCost(costMatrix, gpus)
+	optimalCost, assignments := FindMinimumCost(costMatrix, gpus)
 	fmt.Printf("Optimal cost: %d\n", optimalCost)
+	fmt.Printf("Assignments: %v\n", assignments)
 }
