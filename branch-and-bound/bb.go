@@ -89,9 +89,13 @@ func CalculateCost(cost []int, x int, gpus, jobs int, assigned []bool) int {
 	return totalCost
 }
 
-func FindMinimumCost(costMatrix []int, numberOfGpus int) (int, []Assignment) {
+func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 	jobs := len(costMatrix) / numberOfGpus
 	h := initializeHeap(Nodes{})
+
+	for i := 0; i < numberOfGpus*numberOfGpus; i++ {
+		costMatrix[i] = 10000 - costMatrix[i]
+	}
 
 	var assigned []bool
 	for i := 0; i < numberOfGpus; i++ {
@@ -159,7 +163,7 @@ func main() {
 		8, 9, 98, 23,
 	}
 	gpus := 4
-	optimalCost, assignments := FindMinimumCost(costMatrix, gpus)
+	optimalCost, assignments := BranchAndBound(costMatrix, gpus)
 	fmt.Printf("Optimal cost: %d\n", optimalCost)
 	fmt.Printf("Assignments: %v\n", assignments)
 }
