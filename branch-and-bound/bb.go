@@ -37,7 +37,7 @@ func initializeHeap(nodes []*Node) *Nodes {
 
 func (h Nodes) Len() int { return len(h) }
 
-// order the heap by the cost of the node
+// order the heap from the lowest cost all the way up to the highest cost
 func (h Nodes) Less(i, j int) bool { return h[i].pathCost > h[j].pathCost }
 
 func (h Nodes) Swap(i, j int) {
