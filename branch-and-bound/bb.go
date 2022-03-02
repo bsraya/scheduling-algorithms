@@ -38,7 +38,7 @@ func initializeHeap(nodes []*Node) *Nodes {
 func (h Nodes) Len() int { return len(h) }
 
 // order the heap by the cost of the node
-func (h Nodes) Less(i, j int) bool { return h[i].cost < h[j].cost }
+func (h Nodes) Less(i, j int) bool { return h[i].pathCost > h[j].pathCost }
 
 func (h Nodes) Swap(i, j int) {
 	h[i], h[j] = h[j], h[i]
@@ -153,10 +153,10 @@ func FindMinimumCost(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 
 func main() {
 	costMatrix := []int{
-		9, 2, 7, 8,
-		6, 4, 3, 7,
-		5, 8, 1, 8,
-		7, 6, 9, 4,
+		82, 83, 69, 92,
+		77, 37, 49, 92,
+		11, 69, 5, 86,
+		8, 9, 98, 23,
 	}
 	gpus := 4
 	optimalCost, assignments := FindMinimumCost(costMatrix, gpus)
