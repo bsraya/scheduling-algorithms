@@ -8,6 +8,11 @@ import (
 
 var assignments []Assignment
 
+type Matrix struct {
+	costs        []int
+	numberOfGpus int
+}
+
 type Assignment struct {
 	workerID int
 	jobID    int
@@ -152,14 +157,47 @@ func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 }
 
 func main() {
-	costMatrix := []int{
-		82, 83, 69, 92,
-		77, 37, 49, 92,
-		11, 69, 5, 86,
-		8, 9, 98, 23,
+	matrices := []Matrix{
+		{
+			costs: []int{
+				9, 2, 7, 8,
+				6, 4, 3, 7,
+				5, 8, 1, 8,
+				7, 6, 9, 4,
+			},
+			numberOfGpus: 4,
+		},
+		{
+			costs: []int{
+				82, 83, 69, 92,
+				77, 37, 49, 92,
+				11, 69, 5, 86,
+				8, 9, 98, 23,
+			},
+			numberOfGpus: 4,
+		},
+		{
+			costs: []int{
+				2500, 4000, 3500,
+				4000, 6000, 3500,
+				2000, 4000, 2500,
+			},
+			numberOfGpus: 3,
+		},
+		{
+			costs: []int{
+				90, 75, 75, 80,
+				30, 85, 55, 65,
+				125, 95, 90, 105,
+				45, 110, 95, 115,
+			},
+			numberOfGpus: 4,
+		},
 	}
-	gpus := 4
-	optimalCost, assignments := BranchAndBound(costMatrix, gpus)
-	fmt.Printf("Optimal cost: %d\n", optimalCost)
-	fmt.Printf("Assignments: %v\n", assignments)
+
+	for _, matrix := range matrices {
+		optimalCost, assignments := BranchAndBound(matrix.costs, matrix.numberOfGpus)
+		fmt.Printf("Optimal cost: %d\n", optimalCost)
+		fmt.Printf("Assignments: %v\n", assignments)
+	}
 }
