@@ -93,10 +93,6 @@ func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 	jobs := len(costMatrix) / numberOfGpus
 	h := initializeHeap(Nodes{})
 
-	for i := 0; i < numberOfGpus*numberOfGpus; i++ {
-		costMatrix[i] = 10000 - costMatrix[i]
-	}
-
 	var assigned []bool
 	for i := 0; i < numberOfGpus; i++ {
 		assigned = append(assigned, false)
