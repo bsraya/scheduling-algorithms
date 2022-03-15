@@ -8,14 +8,15 @@ import (
 
 var assignments []Assignment
 
-type Matrix struct {
-	costs        []int
-	numberOfGpus int
-}
-
 type Assignment struct {
 	workerID int
 	jobID    int
+}
+
+type Jobs struct {
+	costs         []int
+	numberOfNodes int
+	numberOfJobs  int
 }
 
 type Node struct {
@@ -71,24 +72,24 @@ func AssignJobToNode(minimum *Node) {
 	assignments = append(assignments, Assignment{minimum.workerID, minimum.jobID})
 }
 
-func CalculateCost(cost []int, x int, numberOfGpus, numberOfJobs int, assigned []bool) int {
+func CalculateCost(jobs Jobs, x int, assigned []bool) int {
 	totalCost := 0
 
 	available := []bool{}
-	for i := 0; i < numberOfJobs; i++ {
+	for i := 0; i < jobs.numberOfJobs; i++ {
 		available = append(available, true)
 	}
 
-	for i := x + 1; i < numberOfGpus; i++ {
-		min := math.MaxInt
-		minIndex := math.MinInt
-		for j := 0; j < numberOfJobs; j++ {
-			if !assigned[j] && available[j] && cost[i*numberOfJobs+j] < min {
+	for i := x + 1; i < jobs.numberOfNodes; i++ {
+		max := math.MinInt64
+		minIndex := -1
+		for j := 0; j < jobs.numberOfJobs; j++ {
+			if !assigned[j] && available[j] && jobs.costs[i*jobs.numberOfJobs+j] > max {
 				minIndex = j
-				min = cost[i*numberOfJobs+j]
+				max = jobs.costs[i*jobs.numberOfJobs+j]
 			}
 		}
-		totalCost += min
+		totalCost += max
 		available[minIndex] = false
 	}
 	return totalCost
