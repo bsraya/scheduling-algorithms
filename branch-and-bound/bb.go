@@ -95,12 +95,11 @@ func CalculateCost(jobs Jobs, x int, assigned []bool) int {
 	return totalCost
 }
 
-func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
-	numberOfJobs := len(costMatrix) / numberOfGpus
+func BranchAndBound(jobs Jobs) (int, []Assignment) {
 	h := initializeHeap(Nodes{})
 
 	var assigned []bool
-	for i := 0; i < numberOfJobs; i++ {
+	for i := 0; i < jobs.numberOfJobs; i++ {
 		assigned = append(assigned, false)
 	}
 
@@ -111,7 +110,7 @@ func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 		cost:     0,
 		workerID: -1,
 		jobID:    -1,
-		assigned: assigned,
+		assigned: append([]bool{}, assigned...),
 	})
 	cost := 0
 
@@ -120,12 +119,12 @@ func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 		min := heap.Pop(h).(*Node)
 		i := min.workerID + 1
 
-		if i == numberOfGpus {
+		if i == jobs.numberOfNodes {
 			AssignJobToNode(min)
 			cost = min.cost
 			break
 		}
-		for j := 0; j < numberOfJobs; j++ {
+		for j := 0; j < jobs.numberOfJobs; j++ {
 			if !min.assigned[j] {
 				child := &Node{
 					parent:   min,
@@ -133,12 +132,11 @@ func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 					cost:     0,
 					workerID: i,
 					jobID:    j,
-					assigned: []bool{},
+					assigned: append([]bool{}, min.assigned...),
 				}
-				child.assigned = append(child.assigned, min.assigned...)
 				child.assigned[j] = true
-				child.pathCost = min.pathCost + costMatrix[i*numberOfJobs+j]
-				child.cost = child.pathCost + CalculateCost(costMatrix, i, numberOfGpus, numberOfJobs, child.assigned)
+				child.pathCost = min.pathCost + jobs.costs[i*jobs.numberOfJobs+j]
+				child.cost = child.pathCost + CalculateCost(jobs, i, child.assigned)
 				heap.Push(h, child)
 			}
 		}
@@ -158,47 +156,17 @@ func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 }
 
 func main() {
-	matrices := []Matrix{
-		{
-			costs: []int{
-				9, 2, 7, 8,
-				6, 4, 3, 7,
-				5, 8, 1, 8,
-				7, 6, 9, 4,
-			},
-			numberOfGpus: 4,
-		},
-		{
-			costs: []int{
-				82, 83, 69, 92,
-				77, 37, 49, 92,
-				11, 69, 5, 86,
-				8, 9, 98, 23,
-			},
-			numberOfGpus: 4,
-		},
-		{
-			costs: []int{
-				2500, 4000, 3500,
-				4000, 6000, 3500,
-				2000, 4000, 2500,
-			},
-			numberOfGpus: 3,
-		},
-		{
-			costs: []int{
-				90, 75, 75, 80,
-				30, 85, 55, 65,
-				125, 95, 90, 105,
-				45, 110, 95, 115,
-			},
-			numberOfGpus: 4,
-		},
+	var matrix Jobs
+	matrix.costs = []int{
+		9, 4, 5, 6,
+		9, 4, 5, 6,
+		9, 4, 5, 6,
+		9, 4, 5, 6,
 	}
 
-	for _, matrix := range matrices {
-		optimalCost, assignments := BranchAndBound(matrix.costs, matrix.numberOfGpus)
-		fmt.Printf("Optimal cost: %d\n", optimalCost)
-		fmt.Printf("Assignments: %v\n", assignments)
-	}
+	matrix.numberOfNodes = 4
+	matrix.numberOfJobs = len(matrix.costs) / matrix.numberOfNodes
+	cost, assignments := BranchAndBound(matrix)
+	fmt.Println(cost)
+	fmt.Println(assignments)
 }
