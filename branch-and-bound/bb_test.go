@@ -78,7 +78,7 @@ func TestBranchAndBound(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		totalCost, assignments := FindMinimumCost(test.costMatrix, test.numberOfGpus)
+		totalCost, assignments := BranchAndBound(test.costMatrix, test.numberOfGpus)
 		if totalCost != test.totalCost {
 			t.Errorf("Expected total cost to be %d, but got %d", test.totalCost, totalCost)
 		}

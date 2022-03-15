@@ -71,21 +71,21 @@ func AssignJobToNode(minimum *Node) {
 	assignments = append(assignments, Assignment{minimum.workerID, minimum.jobID})
 }
 
-func CalculateCost(cost []int, x int, gpus, jobs int, assigned []bool) int {
+func CalculateCost(cost []int, x int, numberOfGpus, numberOfJobs int, assigned []bool) int {
 	totalCost := 0
 
 	available := []bool{}
-	for i := 0; i < gpus; i++ {
+	for i := 0; i < numberOfJobs; i++ {
 		available = append(available, true)
 	}
 
-	for i := x + 1; i < gpus; i++ {
+	for i := x + 1; i < numberOfGpus; i++ {
 		min := math.MaxInt
 		minIndex := math.MinInt
-		for j := 0; j < jobs; j++ {
-			if !assigned[j] && available[j] && cost[i*gpus+j] < min {
+		for j := 0; j < numberOfJobs; j++ {
+			if !assigned[j] && available[j] && cost[i*numberOfJobs+j] < min {
 				minIndex = j
-				min = cost[i*gpus+j]
+				min = cost[i*numberOfJobs+j]
 			}
 		}
 		totalCost += min
@@ -95,11 +95,11 @@ func CalculateCost(cost []int, x int, gpus, jobs int, assigned []bool) int {
 }
 
 func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
-	jobs := len(costMatrix) / numberOfGpus
+	numberOfJobs := len(costMatrix) / numberOfGpus
 	h := initializeHeap(Nodes{})
 
 	var assigned []bool
-	for i := 0; i < numberOfGpus; i++ {
+	for i := 0; i < numberOfJobs; i++ {
 		assigned = append(assigned, false)
 	}
 
@@ -124,7 +124,7 @@ func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 			cost = min.cost
 			break
 		}
-		for j := 0; j < jobs; j++ {
+		for j := 0; j < numberOfJobs; j++ {
 			if !min.assigned[j] {
 				child := &Node{
 					parent:   min,
@@ -136,8 +136,8 @@ func BranchAndBound(costMatrix []int, numberOfGpus int) (int, []Assignment) {
 				}
 				child.assigned = append(child.assigned, min.assigned...)
 				child.assigned[j] = true
-				child.pathCost = min.pathCost + costMatrix[i*numberOfGpus+j]
-				child.cost = child.pathCost + CalculateCost(costMatrix, i, numberOfGpus, jobs, child.assigned)
+				child.pathCost = min.pathCost + costMatrix[i*numberOfJobs+j]
+				child.cost = child.pathCost + CalculateCost(costMatrix, i, numberOfGpus, numberOfJobs, child.assigned)
 				heap.Push(h, child)
 			}
 		}
